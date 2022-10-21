@@ -8,33 +8,42 @@ import Capacitor
 @objc(BiometricNativePlugin)
 public class BiometricNativePlugin: CAPPlugin {
     private let implementation = BiometricNative()
-
-    @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.echo(value)
-        ])
-    }
     
     @objc func getItem(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
-        call.resolve([
-            "value": implementation.getItem(value)
-        ])
+        do {
+            let value = try implementation.getItemFromKeychain(key)
+            call.resolve(["value": value])
+        } catch {
+            call.reject(error.localizedDescription)
+        }
     }
     
     @objc func setItem(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.setItem(key, value)
-        ])
+        do {
+            let value = try implementation.storeItemInKeychainWithBiometrics(key, value)
+            call.resolve(["successful": value])
+        } catch BiometricNative.KeychainError.duplicateItem {
+            do {
+                let value = try implementation.updateItemInKeychain(key, value)
+                call.resolve(["successful": value])
+            } catch {
+                call.reject(error.localizedDescription)
+            }
+        } catch {
+            call.reject(error.localizedDescription)
+        }
     }
 
     @objc func removeItem(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
-        call.resolve([
-            "value": implementation.removeItem(value)
-        ])
+        do {
+            let value = try implementation.removeItemFromKeychain(key)
+            call.resolve(["successful": value])
+        } catch {
+            call.reject(error.localizedDescription)
+        }
     }
 }
