@@ -24,11 +24,11 @@ public class BiometricNativePlugin: CAPPlugin {
         let value = call.getString("value") ?? ""
         do {
             let value = try implementation.storeItemInKeychainWithBiometrics(key, value)
-            call.resolve(["successful": value])
+            call.resolve()
         } catch BiometricNative.KeychainError.duplicateItem {
             do {
                 let value = try implementation.updateItemInKeychain(key, value)
-                call.resolve(["successful": value])
+                call.resolve()
             } catch {
                 call.reject(error.localizedDescription)
             }
@@ -41,7 +41,7 @@ public class BiometricNativePlugin: CAPPlugin {
         let key = call.getString("key") ?? ""
         do {
             let value = try implementation.removeItemFromKeychain(key)
-            call.resolve(["successful": value])
+            call.resolve()
         } catch {
             call.reject(error.localizedDescription)
         }

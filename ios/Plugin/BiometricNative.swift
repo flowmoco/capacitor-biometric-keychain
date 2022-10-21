@@ -29,7 +29,7 @@ import Foundation
         return value
     }
     
-    func storeItemInKeychainWithBiometrics(_ key: String, _ value: String) throws -> Bool {
+    func storeItemInKeychainWithBiometrics(_ key: String, _ value: String) throws{
         let accessControl = SecAccessControlCreateWithFlags(
           nil,
           kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
@@ -44,11 +44,9 @@ import Foundation
         
         guard status != errSecDuplicateItem else { throw KeychainError.duplicateItem }
         guard status == errSecSuccess else { throw KeychainError.unhandledError(status: status) }
-    
-        return true
     }
     
-    func updateItemInKeychain(_ itemName: String, _ value: String) throws -> Bool {
+    func updateItemInKeychain(_ itemName: String, _ value: String) throws {
         let query: [String: Any] = [kSecClass as String: kSecClassKey,
                                     kSecAttrApplicationTag as String: itemName]
         
@@ -57,17 +55,13 @@ import Foundation
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
         guard status != errSecItemNotFound else { throw KeychainError.noPassword }
         guard status == errSecSuccess else { throw KeychainError.unhandledError(status: status) }
-        
-        return true
     }
     
-    func removeItemFromKeychain(_ key: String) throws -> Bool {
+    func removeItemFromKeychain(_ key: String) throws {
         let query: [String: Any] = [kSecClass as String: kSecClassKey,
                                     kSecAttrApplicationTag as String: key]
         
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError.unhandledError(status: status) }
-        
-        return true
     }
 }

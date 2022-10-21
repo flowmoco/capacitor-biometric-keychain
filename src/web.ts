@@ -6,10 +6,6 @@ export class BiometricNativeWeb
   extends WebPlugin
   implements BiometricNativePlugin
 {
-  async echo(options: { value: string }): Promise<{ value: string }> {
-    console.log('ECHO', options);
-    return options;
-  }
   getItem(): Promise<{ value: string; error?: string | undefined; }> {
     throw new Error('Method not implemented.');
   }
