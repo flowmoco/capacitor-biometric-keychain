@@ -10,4 +10,13 @@ export class BiometricNativeWeb
     console.log('ECHO', options);
     return options;
   }
+  getItem(): Promise<{ value: string; error?: string | undefined; }> {
+    throw new Error('Method not implemented.');
+  }
+  setItem(): Promise<{ successful: boolean; error?: string | undefined; }> {
+    throw new Error('Method not implemented.');
+  }
+  removeItem(): Promise<{ successful: boolean; error?: string | undefined; }> {
+    throw new Error('Method not implemented.');
+  }
 }

@@ -19,4 +19,32 @@ public class BiometricNativePlugin extends Plugin {
         ret.put("value", implementation.echo(value));
         call.resolve(ret);
     }
+
+    @PluginMethod
+    public void getItem(PluginCall call) {
+        String key = call.getString("key");
+
+        JSObject ret = new JSObject();
+        ret.put("value", implementation.getItem(key));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setItem(PluginCall call) {
+        String key = call.getString("key");
+        String value = call.getString("value");
+
+        JSObject ret = new JSObject();
+        ret.put("successful", implementation.setItem(key, value));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void removeItem(PluginCall call) {
+        String key = call.getString("key");
+
+        JSObject ret = new JSObject();
+        ret.put("successful", implementation.removeItem(key));
+        call.resolve(ret);
+    }
 }

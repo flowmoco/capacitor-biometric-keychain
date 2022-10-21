@@ -15,4 +15,26 @@ public class BiometricNativePlugin: CAPPlugin {
             "value": implementation.echo(value)
         ])
     }
+    
+    @objc func getItem(_ call: CAPPluginCall) {
+        let key = call.getString("key") ?? ""
+        call.resolve([
+            "value": implementation.getItem(value)
+        ])
+    }
+    
+    @objc func setItem(_ call: CAPPluginCall) {
+        let key = call.getString("key") ?? ""
+        let value = call.getString("value") ?? ""
+        call.resolve([
+            "value": implementation.setItem(key, value)
+        ])
+    }
+
+    @objc func removeItem(_ call: CAPPluginCall) {
+        let key = call.getString("key") ?? ""
+        call.resolve([
+            "value": implementation.removeItem(value)
+        ])
+    }
 }
