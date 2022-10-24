@@ -8,7 +8,7 @@ import Capacitor
 @objc(BiometricNativePlugin)
 public class BiometricNativePlugin: CAPPlugin {
     private let implementation = BiometricNative()
-    
+
     @objc func getItem(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         do {
@@ -18,7 +18,7 @@ public class BiometricNativePlugin: CAPPlugin {
             call.reject(error.localizedDescription)
         }
     }
-    
+
     @objc func setItem(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         let value = call.getString("value") ?? ""
