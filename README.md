@@ -13,24 +13,56 @@ npx cap sync
 
 <docgen-index>
 
-* [`echo(...)`](#echo)
+* [`getItem(...)`](#getitem)
+* [`setItem(...)`](#setitem)
+* [`removeItem(...)`](#removeitem)
 
 </docgen-index>
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### echo(...)
+### getItem(...)
 
 ```typescript
-echo(options: { value: string; }) => Promise<{ value: string; }>
+getItem(options: { key: string; }) => Promise<{ value: string; error?: any; }>
 ```
 
-| Param         | Type                            |
-| ------------- | ------------------------------- |
-| **`options`** | <code>{ value: string; }</code> |
+| Param         | Type                          |
+| ------------- | ----------------------------- |
+| **`options`** | <code>{ key: string; }</code> |
 
-**Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
+**Returns:** <code>Promise&lt;{ value: string; error?: any; }&gt;</code>
+
+--------------------
+
+
+### setItem(...)
+
+```typescript
+setItem(options: { key: string; value: string; }) => Promise<{ error?: any; }>
+```
+
+| Param         | Type                                         |
+| ------------- | -------------------------------------------- |
+| **`options`** | <code>{ key: string; value: string; }</code> |
+
+**Returns:** <code>Promise&lt;{ error?: any; }&gt;</code>
+
+--------------------
+
+
+### removeItem(...)
+
+```typescript
+removeItem(options: { key: string; }) => Promise<{ error?: any; }>
+```
+
+| Param         | Type                          |
+| ------------- | ----------------------------- |
+| **`options`** | <code>{ key: string; }</code> |
+
+**Returns:** <code>Promise&lt;{ error?: any; }&gt;</code>
 
 --------------------
 
