@@ -1,98 +1,80 @@
 package co.flowmo.biometrickeychain;
 
-import android.os.Build;
+import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
-import android.security.keystore.KeyProtection;
+import android.util.Base64;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
+import java.security.GeneralSecurityException;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 public class KeystoreManager {
-    public KeyStore keyStore;
-    public static final String DECRYPT_ALIAS_PREFIX = "DECRYPT_";
-    public static final String ENCRYPT_ALIAS_PREFIX = "ENCRYPT_";
-    public static final String BIOMETRIC_NATIVE_SHARED_PREFERENCES = "BiometricNativeSharedPreferences";
+    private KeyStore keyStore;
+    private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
+    private static final String TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final byte[] FIXED_IV = new byte[12];
+    public static final String BIOMETRIC_NATIVE_SHARED_PREFERENCES = "NativeBiometricSharedPreferences";
 
-    public KeyStore getKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
-        if (keyStore == null) {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
-        }
-        return keyStore;
+    public String decryptString(String stringToDecrypt, Cipher cipher) throws IllegalBlockSizeException, BadPaddingException {
+        byte[] encryptedData = Base64.decode(stringToDecrypt, Base64.DEFAULT);
+
+        byte[] decryptedData = cipher.doFinal(encryptedData);
+        return new String(decryptedData, StandardCharsets.UTF_8);
+}
+
+    public String encryptString(String stringToEncrypt, String KEY_ALIAS) throws GeneralSecurityException, IOException {
+        Cipher cipher;
+        cipher = Cipher.getInstance(TRANSFORMATION);
+        cipher.init(Cipher.ENCRYPT_MODE, getKey(KEY_ALIAS), new GCMParameterSpec(128, FIXED_IV));
+        byte[] encodedBytes = cipher.doFinal(stringToEncrypt.getBytes(StandardCharsets.UTF_8));
+        return Base64.encodeToString(encodedBytes, Base64.DEFAULT);
     }
 
-    public String encryptString(String stringToEncrypt, String alias) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException, UnrecoverableEntryException, CertificateException, KeyStoreException, IOException {
-        Cipher cipher = null;
-        cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.ENCRYPT_MODE, getKey(ENCRYPT_ALIAS_PREFIX.concat(alias)));
-        byte[] cipherText = cipher.doFinal(stringToEncrypt.getBytes(StandardCharsets.UTF_8));
-        return new String(cipherText, StandardCharsets.UTF_8);
-    }
-
-    public Cipher getDecryptCipher(String alias) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, CertificateException, KeyStoreException, IOException {
-        Cipher cipher = null;
-        cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.DECRYPT_MODE, getKey(DECRYPT_ALIAS_PREFIX.concat(alias)));
+    public Cipher getDecryptCipher(String KEY_ALIAS) throws GeneralSecurityException, IOException {
+        Cipher cipher;
+        cipher = Cipher.getInstance(TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, getKey(KEY_ALIAS), new GCMParameterSpec(128, FIXED_IV));
         return cipher;
     }
 
-    public String decryptString(String stringToDecrypt, Cipher cipher) throws IllegalBlockSizeException, BadPaddingException {
-        byte[] cipherText = cipher.doFinal(stringToDecrypt.getBytes(StandardCharsets.UTF_8));
-        return new String(cipherText, StandardCharsets.UTF_8);
+    private Key generateKey(String KEY_ALIAS) throws GeneralSecurityException {
+        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE);
+        generator.init(new KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+               KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(false)
+                .setUserAuthenticationRequired(true)
+                .build()
+        );
+        return generator.generateKey();
     }
 
-    private SecretKey getKey(String alias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableEntryException {
-        KeyStore.SecretKeyEntry secretKeyEntry = (KeyStore.SecretKeyEntry)getKeyStore().getEntry(alias, null);
-
-        if (secretKeyEntry == null) {
-            generateKeys(alias);
+    private Key getKey(String KEY_ALIAS) throws GeneralSecurityException, IOException {
+        KeyStore.SecretKeyEntry secretKeyEntry = (KeyStore.SecretKeyEntry) getKeyStore().getEntry(KEY_ALIAS, null);
+        if (secretKeyEntry != null) {
+            return secretKeyEntry.getSecretKey();
         }
-
-        assert secretKeyEntry != null;
-        return secretKeyEntry.getSecretKey();
+        return generateKey(KEY_ALIAS);
     }
 
-    private void generateKeys(String alias) throws NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(128);
-        SecretKey secretKey = keyGen.generateKey();
-
-        // This time we do specify "AndroidKeyStore".
-        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
-        keyStore.load(null);
-
-        // Now we import the encryption key, with no authentication requirements.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            keyStore.setEntry(
-                    ENCRYPT_ALIAS_PREFIX.concat(alias),
-                    new KeyStore.SecretKeyEntry(secretKey),
-                    new KeyProtection.Builder(KeyProperties.PURPOSE_ENCRYPT)
-                            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                            .build());
-
-            // And the decryption key, this time requiring user authentication.
-            keyStore.setEntry(
-                    DECRYPT_ALIAS_PREFIX.concat(alias),
-                    new KeyStore.SecretKeyEntry(secretKey),
-                    new KeyProtection.Builder(KeyProperties.PURPOSE_DECRYPT)
-                            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                            .setUserAuthenticationRequired(true)
-                            .build());
+    private KeyStore getKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        if (keyStore == null) {
+            keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
+            keyStore.load(null);
         }
+        return keyStore;
     }
 }

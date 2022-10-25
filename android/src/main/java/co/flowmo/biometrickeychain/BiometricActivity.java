@@ -44,12 +44,9 @@ public class BiometricActivity extends AppCompatActivity {
                 .setDescription(getIntent().hasExtra("description") ? getIntent().getStringExtra("description") : null);
         boolean useFallback = getIntent().getBooleanExtra("useFallback", false);
 
-        if(useFallback)
-        {
+        if(useFallback) {
             builder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL | BiometricManager.Authenticators.BIOMETRIC_STRONG);
-        }
-        else
-        {
+        } else {
             builder.setNegativeButtonText(getIntent().hasExtra("negativeButtonText") ? getIntent().getStringExtra("negativeButtonText") : "Cancel");
         }
 
@@ -75,7 +72,6 @@ public class BiometricActivity extends AppCompatActivity {
                     finishActivity("Failed to decrypt string");
                     e.printStackTrace();
                 }
-
             }
             @Override
             public void onAuthenticationFailed() {
@@ -107,7 +103,7 @@ public class BiometricActivity extends AppCompatActivity {
 
     private void successfulFinishActivity(String decryptedString) {
         Intent intent = new Intent();
-        intent.putExtra("result", "successful");
+        intent.putExtra("result", "success");
         intent.putExtra("decryptedString", decryptedString);
         setResult(RESULT_OK, intent);
         finish();
