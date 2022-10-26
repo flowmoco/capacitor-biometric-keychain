@@ -3,11 +3,14 @@ package co.flowmo.biometrickeychain;
 import static co.flowmo.biometrickeychain.KeystoreManager.*;
 
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 
 import androidx.activity.result.ActivityResult;
+import androidx.biometric.BiometricManager;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -22,6 +25,30 @@ import java.security.GeneralSecurityException;
 @CapacitorPlugin(name = "BiometricNative")
 public class BiometricNativePlugin extends Plugin {
     private KeystoreManager keystoreManager;
+
+    public Boolean checkBiometricsAvailable() {
+        Boolean available = false;
+        BiometricManager biometricManager = BiometricManager.from(getContext());
+        int canAuthenticate;
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+            canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+        } else {
+            KeyguardManager keyguardManager = (KeyguardManager) getActivity().getSystemService(Context.KEYGUARD_SERVICE);
+            if (!keyguardManager.isDeviceSecure()) {
+                return false;
+            }
+            canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+        }
+
+        switch (canAuthenticate) {
+            case BiometricManager.BIOMETRIC_SUCCESS:
+                return true;
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
+                return false;
+        }
+
+        return available;
+    }
 
     @PluginMethod
     public void getItem(PluginCall call) {
