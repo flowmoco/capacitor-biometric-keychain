@@ -1,6 +1,6 @@
 {
   "name": "@flowmoco/capacitor-biometric-keychain",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Uses Keychain and Keystore on ios and android respectively to give a secure localStorage like API that uses a biometric lock for read and update operations",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",

@@ -34,9 +34,7 @@ public class KeystoreManager {
 }
 
     public String encryptString(String stringToEncrypt, Cipher cipher) throws IllegalBlockSizeException, BadPaddingException {
-        byte[] dataToEncrypt = Base64.decode(stringToEncrypt, Base64.DEFAULT);
-
-        byte[] encodedBytes = cipher.doFinal(dataToEncrypt);
+        byte[] encodedBytes = cipher.doFinal(stringToEncrypt.getBytes(StandardCharsets.UTF_8));
         return Base64.encodeToString(encodedBytes, Base64.DEFAULT);
     }
 

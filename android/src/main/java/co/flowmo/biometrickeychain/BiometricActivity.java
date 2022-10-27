@@ -20,7 +20,6 @@ public class BiometricActivity extends AppCompatActivity {
     private int maxAttempts;
     private int counter = 0;
     private KeystoreManager keystoreManager;
-    private boolean encryptionMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,15 +28,14 @@ public class BiometricActivity extends AppCompatActivity {
 
         String keyAlias = getIntent().getStringExtra("keyAlias");
         Cipher cipher;
+        boolean encryptionMode = getIntent().hasExtra("plainText");
         maxAttempts = getIntent().getIntExtra("maxAttempts", 1);
         keystoreManager = new KeystoreManager();
-        encryptionMode = getIntent().hasExtra("plainText");
-
 
         try {
             cipher = encryptionMode ? keystoreManager.getEncryptCipher(keyAlias) : keystoreManager.getDecryptCipher(keyAlias);
             BiometricPrompt.CryptoObject cryptoObject = new BiometricPrompt.CryptoObject(cipher);
-            createBiometricPrompt().authenticate(createBiometricPromptInfo(), cryptoObject);
+            createBiometricPrompt(encryptionMode).authenticate(createBiometricPromptInfo(), cryptoObject);
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
         }
@@ -50,7 +48,7 @@ public class BiometricActivity extends AppCompatActivity {
                 .setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL | BiometricManager.Authenticators.BIOMETRIC_STRONG).build();
     }
 
-    private BiometricPrompt createBiometricPrompt() {
+    private BiometricPrompt createBiometricPrompt(boolean encryptionMode) {
         Executor executor;
         executor = this.getMainExecutor();
 
@@ -69,6 +67,7 @@ public class BiometricActivity extends AppCompatActivity {
                 super.onAuthenticationSucceeded(result);
                 Cipher decryptCipher = Objects.requireNonNull(result.getCryptoObject()).getCipher();
                 String stringToDecrypt = getIntent().getStringExtra("cipherText");
+
                 assert decryptCipher != null;
                 try {
                     String decryptedString = keystoreManager.decryptString(stringToDecrypt, decryptCipher);
