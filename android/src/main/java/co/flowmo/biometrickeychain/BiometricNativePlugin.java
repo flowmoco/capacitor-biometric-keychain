@@ -59,7 +59,7 @@ public class BiometricNativePlugin extends Plugin {
     public void getItem(PluginCall call) {
         String key = call.getString("key");
 
-        if (biometricsAreAvailable(call)) {
+        if (!biometricsAreAvailable(call)) {
             return;
         }
 
@@ -83,7 +83,7 @@ public class BiometricNativePlugin extends Plugin {
         String value = call.getString("value");
 
         if (key != null && value != null) {
-            if (biometricsAreAvailable(call)) {
+            if (!biometricsAreAvailable(call)) {
                 return;
             }
             try {
