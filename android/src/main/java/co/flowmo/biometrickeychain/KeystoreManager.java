@@ -33,12 +33,18 @@ public class KeystoreManager {
         return new String(decryptedData, StandardCharsets.UTF_8);
 }
 
-    public String encryptString(String stringToEncrypt, String KEY_ALIAS) throws GeneralSecurityException, IOException {
+    public String encryptString(String stringToEncrypt, Cipher cipher) throws IllegalBlockSizeException, BadPaddingException {
+        byte[] dataToEncrypt = Base64.decode(stringToEncrypt, Base64.DEFAULT);
+
+        byte[] encodedBytes = cipher.doFinal(dataToEncrypt);
+        return Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+    }
+
+    public Cipher getEncryptCipher(String KEY_ALIAS) throws GeneralSecurityException, IOException {
         Cipher cipher;
         cipher = Cipher.getInstance(TRANSFORMATION);
         cipher.init(Cipher.ENCRYPT_MODE, getKey(KEY_ALIAS), new GCMParameterSpec(128, FIXED_IV));
-        byte[] encodedBytes = cipher.doFinal(stringToEncrypt.getBytes(StandardCharsets.UTF_8));
-        return Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+        return cipher;
     }
 
     public Cipher getDecryptCipher(String KEY_ALIAS) throws GeneralSecurityException, IOException {
@@ -57,7 +63,6 @@ public class KeystoreManager {
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setRandomizedEncryptionRequired(false)
                 .setUserAuthenticationRequired(true)
-                .setUserAuthenticationParameters(300, KeyProperties.AUTH_BIOMETRIC_STRONG | KeyProperties.AUTH_DEVICE_CREDENTIAL)
                 .build()
         );
         return generator.generateKey();
@@ -71,7 +76,7 @@ public class KeystoreManager {
         return generateKey(KEY_ALIAS);
     }
 
-    private KeyStore getKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+    public KeyStore getKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
         if (keyStore == null) {
             keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
             keyStore.load(null);

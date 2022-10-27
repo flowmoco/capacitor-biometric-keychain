@@ -22,16 +22,15 @@ import java.security.GeneralSecurityException;
 
 @CapacitorPlugin(name = "BiometricNative")
 public class BiometricNativePlugin extends Plugin {
-    private KeystoreManager keystoreManager;
 
-    private boolean biometricsAreAvailable(PluginCall call) {
-        boolean available = false;
+    private boolean biometricsNotAvailable(PluginCall call) {
+        boolean available = true;
         BiometricManager biometricManager = BiometricManager.from(getContext());
         int canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
 
         switch (canAuthenticate) {
             case BiometricManager.BIOMETRIC_SUCCESS:
-                available = true;
+                available = false;
                 break;
             case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
                 call.reject("No biometrics enrolled");
@@ -59,7 +58,7 @@ public class BiometricNativePlugin extends Plugin {
     public void getItem(PluginCall call) {
         String key = call.getString("key");
 
-        if (!biometricsAreAvailable(call)) {
+        if (biometricsNotAvailable(call)) {
             return;
         }
 
@@ -71,10 +70,11 @@ public class BiometricNativePlugin extends Plugin {
             return;
         }
 
-        Intent authIntent = createIntentForAuthentication(key, encryptedData);
+        Intent authIntent = createIntentForAuthentication(key);
+        authIntent.putExtra("cipherText", encryptedData);
 
         bridge.saveCall(call);
-        startActivityForResult(call, authIntent, "authenticationResult");
+        startActivityForResult(call, authIntent, "authenticationDecryptResult");
     }
 
     @PluginMethod
@@ -83,61 +83,51 @@ public class BiometricNativePlugin extends Plugin {
         String value = call.getString("value");
 
         if (key != null && value != null) {
-            if (!biometricsAreAvailable(call)) {
+            if (biometricsNotAvailable(call)) {
                 return;
             }
-            try {
-                SharedPreferences.Editor editor = getContext().getSharedPreferences(BIOMETRIC_NATIVE_SHARED_PREFERENCES, Context.MODE_PRIVATE).edit();
-                editor.putString(key, getKeystoreManager().encryptString(value, key));
-                editor.apply();
-                call.resolve();
-            } catch (GeneralSecurityException | IOException e) {
-                call.reject("Failed to save item", e);
-                e.printStackTrace();
-            }
-        }
-    }
 
-    public KeystoreManager getKeystoreManager() {
-        if (keystoreManager == null) {
-            keystoreManager = new KeystoreManager();
+            Intent authIntent = createIntentForAuthentication(key);
+            authIntent.putExtra("plainText", value);
+
+            bridge.saveCall(call);
+            startActivityForResult(call, authIntent, "authenticationEncryptResult");
         }
-        return keystoreManager;
     }
 
     @PluginMethod
     public void removeItem(PluginCall call) {
         String key = call.getString("key", null);
 
-        if(key != null){
+        try {
             SharedPreferences.Editor editor = getContext().getSharedPreferences(BIOMETRIC_NATIVE_SHARED_PREFERENCES, Context.MODE_PRIVATE).edit();
-            editor.clear();
+            new KeystoreManager().getKeyStore().deleteEntry(key);
+            editor.remove(key);
             editor.apply();
             call.resolve();
-        }else{
-            call.reject("No key was provided");
+        } catch (GeneralSecurityException | IOException e) {
+            call.reject("Failed to delete entry", e);
         }
     }
 
-    private Intent createIntentForAuthentication(String key, String encryptedData) {
+    private Intent createIntentForAuthentication(String key) {
         Intent intent = new Intent(getContext(), BiometricActivity.class);
 
         intent.putExtra("title", "Authenticate");
         intent.putExtra("keyAlias", key);
-        intent.putExtra("encryptedString", encryptedData);
 
         return intent;
     }
 
     @ActivityCallback
-    private void authenticationResult(PluginCall call, ActivityResult result) {
+    private void authenticationDecryptResult(PluginCall call, ActivityResult result) {
         if (result.getResultCode() == Activity.RESULT_OK) {
             Intent data = result.getData();
             assert data != null;
             if (data.hasExtra("result")) {
                 switch (data.getStringExtra("result")) {
                     case "success":
-                        String decryptedString = data.getStringExtra("decryptedString");
+                        String decryptedString = data.getStringExtra("value");
                         JSObject ret = new JSObject();
                         ret.put("value", decryptedString);
                         call.resolve(ret);
@@ -151,5 +141,30 @@ public class BiometricNativePlugin extends Plugin {
                 }
             }
         }
+    }
+
+    @ActivityCallback
+    private void authenticationEncryptResult(PluginCall call, ActivityResult result) {
+        if (result.getResultCode() == Activity.RESULT_OK) {
+            Intent data = result.getData();
+            assert data != null;
+            if (data.hasExtra("result")) {
+                switch (data.getStringExtra("result")) {
+                    case "success":
+                        SharedPreferences.Editor editor = getContext().getSharedPreferences(BIOMETRIC_NATIVE_SHARED_PREFERENCES, Context.MODE_PRIVATE).edit();
+                        editor.putString(call.getString("key"), data.getStringExtra("value"));
+                        editor.apply();
+                        call.resolve();
+                        break;
+                    case "failed":
+                        call.reject(data.getStringExtra("errorDetails"), data.getStringExtra("errorCode"));
+                        break;
+                    default:
+                        call.reject("Verification error: " + data.getStringExtra("result"));
+                        break;
+                }
+            }
+        }
+
     }
 }

@@ -20,33 +20,45 @@ public class BiometricActivity extends AppCompatActivity {
     private int maxAttempts;
     private int counter = 0;
     private KeystoreManager keystoreManager;
+    private boolean encryptionMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_biometric_activity);
 
+        String keyAlias = getIntent().getStringExtra("keyAlias");
+        Cipher cipher;
         maxAttempts = getIntent().getIntExtra("maxAttempts", 1);
         keystoreManager = new KeystoreManager();
+        encryptionMode = getIntent().hasExtra("plainText");
 
+
+        try {
+            cipher = encryptionMode ? keystoreManager.getEncryptCipher(keyAlias) : keystoreManager.getDecryptCipher(keyAlias);
+            BiometricPrompt.CryptoObject cryptoObject = new BiometricPrompt.CryptoObject(cipher);
+            createBiometricPrompt().authenticate(createBiometricPromptInfo(), cryptoObject);
+        } catch (GeneralSecurityException | IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private BiometricPrompt.PromptInfo createBiometricPromptInfo() {
+        return new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getIntent().getStringExtra("title"))
+                .setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL | BiometricManager.Authenticators.BIOMETRIC_STRONG).build();
+    }
+
+    private BiometricPrompt createBiometricPrompt() {
         Executor executor;
         executor = this.getMainExecutor();
 
-        BiometricPrompt.PromptInfo.Builder builder = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getIntent().hasExtra("title") ? getIntent().getStringExtra("title") : "Authenticate")
-                .setSubtitle(getIntent().hasExtra("subtitle") ? getIntent().getStringExtra("subtitle") : null)
-                .setDescription(getIntent().hasExtra("description") ? getIntent().getStringExtra("description") : null);
-        boolean useFallback = getIntent().getBooleanExtra("useFallback", false);
+        return new BiometricPrompt(this, executor, encryptionMode ? createEncryptionCallback() : createDecryptionCallback());
+    }
 
-        if(useFallback) {
-            builder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL | BiometricManager.Authenticators.BIOMETRIC_STRONG);
-        } else {
-            builder.setNegativeButtonText(getIntent().hasExtra("negativeButtonText") ? getIntent().getStringExtra("negativeButtonText") : "Cancel");
-        }
-
-        BiometricPrompt.PromptInfo promptInfo = builder.build();
-
-        BiometricPrompt biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
+    private BiometricPrompt.AuthenticationCallback createDecryptionCallback() {
+        return new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationError(int errorCode, @NotNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
@@ -55,9 +67,8 @@ public class BiometricActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationSucceeded(@NotNull BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
-                // decrypt and pass back plain text string
                 Cipher decryptCipher = Objects.requireNonNull(result.getCryptoObject()).getCipher();
-                String stringToDecrypt = getIntent().getStringExtra("encryptedString");
+                String stringToDecrypt = getIntent().getStringExtra("cipherText");
                 assert decryptCipher != null;
                 try {
                     String decryptedString = keystoreManager.decryptString(stringToDecrypt, decryptCipher);
@@ -75,16 +86,40 @@ public class BiometricActivity extends AppCompatActivity {
                     finishActivity("Max number of attempts exceeded");
                 }
             }
-        });
-        try {
-            String keyAlias = getIntent().getStringExtra("keyAlias");
-            Cipher decryptCipher = keystoreManager.getDecryptCipher(keyAlias);
-            BiometricPrompt.CryptoObject cryptoObject = new BiometricPrompt.CryptoObject(decryptCipher);
-            biometricPrompt.authenticate(promptInfo, cryptoObject);
-        } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
-        }
+        };
+    }
 
+    private BiometricPrompt.AuthenticationCallback createEncryptionCallback() {
+        return new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode, @NotNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                finishActivity(errString.toString());
+            }
+            @Override
+            public void onAuthenticationSucceeded(@NotNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                // decrypt and pass back plain text string
+                Cipher encryptCipher = Objects.requireNonNull(result.getCryptoObject()).getCipher();
+                String stringToEncrypt = getIntent().getStringExtra("plainText");
+                assert encryptCipher != null;
+                try {
+                    String encryptedString = keystoreManager.encryptString(stringToEncrypt, encryptCipher);
+                    successfulFinishActivity(encryptedString);
+                } catch (GeneralSecurityException e) {
+                    finishActivity("Failed to encrypt string");
+                    e.printStackTrace();
+                }
+            }
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                counter++;
+                if (counter == maxAttempts) {
+                    finishActivity("Max number of attempts exceeded");
+                }
+            }
+        };
     }
 
     private void finishActivity(String error) {
@@ -98,7 +133,7 @@ public class BiometricActivity extends AppCompatActivity {
     private void successfulFinishActivity(String decryptedString) {
         Intent intent = new Intent();
         intent.putExtra("result", "success");
-        intent.putExtra("decryptedString", decryptedString);
+        intent.putExtra("value", decryptedString);
         setResult(RESULT_OK, intent);
         finish();
     }
