@@ -1,9 +1,7 @@
 package co.flowmo.biometrickeychain;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
@@ -32,11 +30,7 @@ public class BiometricActivity extends AppCompatActivity {
         keystoreManager = new KeystoreManager();
 
         Executor executor;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
-            executor = this.getMainExecutor();
-        }else{
-            executor = command -> new Handler().post(command);
-        }
+        executor = this.getMainExecutor();
 
         BiometricPrompt.PromptInfo.Builder builder = new BiometricPrompt.PromptInfo.Builder()
                 .setTitle(getIntent().hasExtra("title") ? getIntent().getStringExtra("title") : "Authenticate")
