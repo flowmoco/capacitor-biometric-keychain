@@ -28,6 +28,8 @@ npx cap sync
 getItem(options: { key: string; }) => Promise<{ value: string; error?: any; }>
 ```
 
+Async get an item from the secure storage. Will invoke device biometric authentication.
+
 | Param         | Type                          |
 | ------------- | ----------------------------- |
 | **`options`** | <code>{ key: string; }</code> |
@@ -43,6 +45,8 @@ getItem(options: { key: string; }) => Promise<{ value: string; error?: any; }>
 setItem(options: { key: string; value: string; }) => Promise<{ error?: any; }>
 ```
 
+Async set an item in secure storage. Will invoke device biometric authentication on Android and only on iOS if overwriting an existing key.
+
 | Param         | Type                                         |
 | ------------- | -------------------------------------------- |
 | **`options`** | <code>{ key: string; value: string; }</code> |
@@ -57,6 +61,8 @@ setItem(options: { key: string; value: string; }) => Promise<{ error?: any; }>
 ```typescript
 removeItem(options: { key: string; }) => Promise<{ error?: any; }>
 ```
+
+Async remove an item from the secure storage. Will not invoke device biometric authentication either platform.
 
 | Param         | Type                          |
 | ------------- | ----------------------------- |
