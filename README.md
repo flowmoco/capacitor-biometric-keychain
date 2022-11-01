@@ -2,6 +2,10 @@
 
 Uses Keychain and Keystore on ios and android respectively to give a secure localStorage like API that uses a biometric lock for read and update operations
 
+Capacitor v4 and above
+Android minSdkVersion 23
+iOS min version 13.0
+
 ## Install
 
 ```bash
