@@ -1,7 +1,9 @@
 package co.flowmo.biometrickeychain;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
@@ -50,7 +52,11 @@ public class BiometricActivity extends AppCompatActivity {
 
     private BiometricPrompt createBiometricPrompt(boolean encryptionMode) {
         Executor executor;
-        executor = this.getMainExecutor();
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+            executor = this.getMainExecutor();
+        }else{
+            executor = command -> new Handler().post(command);
+        }
 
         return new BiometricPrompt(this, executor, encryptionMode ? createEncryptionCallback() : createDecryptionCallback());
     }
