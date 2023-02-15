@@ -9,7 +9,7 @@ iOS min version 13.0
 ## Install
 
 ```bash
-npm install capacitor-biometric-keychain
+npm install @flowmoco/capacitor-biometric-keychain
 npx cap sync
 ```
 
