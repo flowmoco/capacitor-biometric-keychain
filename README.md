@@ -13,6 +13,19 @@ npm install @flowmoco/capacitor-biometric-keychain
 npx cap sync
 ```
 
+## iOS
+To enable FaceID, you must set the the NSFaceIDUsageDescription key.
+
+```
+<key>NSFaceIDUsageDescription</key>
+<string>[Reason why your app needs FaceID]</string>
+```
+
+## Import
+```typescript
+import { BiometricNative } from "@flowmoco/capacitor-biometric-keychain";
+```
+
 ## API
 
 <docgen-index>
