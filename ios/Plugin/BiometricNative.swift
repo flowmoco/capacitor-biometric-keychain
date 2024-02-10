@@ -4,6 +4,7 @@ import Foundation
     enum KeychainError: Error {
         case noPassword
         case unexpectedPasswordData
+        case biometricsUnsupported
         case duplicateItem
         case unhandledError(status: OSStatus)
     }
@@ -17,6 +18,8 @@ import Foundation
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
+        print("KEY FROM GET", itemName)
+        print("STATUS FROM GET", status)
         guard status == errSecSuccess else { throw KeychainError.unhandledError(status: status) }
 
         guard let existingItem = item as? [String: Any],
@@ -30,18 +33,16 @@ import Foundation
     }
 
     func storeItemInKeychainWithBiometrics(_ key: String, _ value: String) throws {
-        let accessControl = SecAccessControlCreateWithFlags(
-          nil,
-          kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-          .userPresence,
-          nil)!
-
+        guard let access = try createAccessControlRequiringBiometrics() else { throw KeychainError.biometricsUnsupported };
+        
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword as String,
                                     kSecValueData as String: value.data(using: .utf8)!,
                                     kSecAttrAccount as String: key,
-                                    kSecAttrAccessControl as String: accessControl]
+                                    kSecAttrAccessControl as String: access]
 
         let status = SecItemAdd(query as CFDictionary, nil)
+        print("KEY FROM STORE", key)
+        print("STATUS FROM STORE", status)
         guard status != errSecDuplicateItem else { throw KeychainError.duplicateItem }
         guard status == errSecSuccess else { throw KeychainError.unhandledError(status: status) }
     }
@@ -65,5 +66,20 @@ import Foundation
         guard status == errSecSuccess || status == errSecItemNotFound else {
              throw KeychainError.unhandledError(status: status)
         }
+    }
+    
+    func createAccessControlRequiringBiometrics() throws -> SecAccessControl? {
+        var error: Unmanaged<CFError>?
+        let access =
+            SecAccessControlCreateWithFlags(nil,
+                                            kSecAttrAccessibleWhenUnlocked,
+                                            .userPresence,
+                                            &error)
+
+        if let error = error?.takeUnretainedValue() {
+            throw error
+        }
+
+        return access
     }
 }
