@@ -10,9 +10,10 @@ public class BiometricNativePlugin: CAPPlugin {
     private let implementation = BiometricNative()
 
     @objc func getItem(_ call: CAPPluginCall) {
+        let service = getConfig().getString("iosService") ?? ""
         let key = call.getString("key") ?? ""
         do {
-            let value = try implementation.getItemFromKeychain(key)
+            let value = try implementation.getItemFromKeychain(service, key)
             call.resolve(["value": value])
         } catch {
             call.reject(error.localizedDescription)
@@ -20,14 +21,15 @@ public class BiometricNativePlugin: CAPPlugin {
     }
 
     @objc func setItem(_ call: CAPPluginCall) {
+        let service = getConfig().getString("iosService") ?? ""
         let key = call.getString("key") ?? ""
         let value = call.getString("value") ?? ""
         do {
-            try implementation.storeItemInKeychainWithBiometrics(key, value)
+            try implementation.storeItemInKeychainWithBiometrics(service, key, value)
             call.resolve()
         } catch BiometricNative.KeychainError.duplicateItem {
             do {
-                try implementation.updateItemInKeychain(key, value)
+                try implementation.updateItemInKeychain(service, key, value)
                 call.resolve()
             } catch {
                 call.reject(error.localizedDescription)
@@ -38,9 +40,10 @@ public class BiometricNativePlugin: CAPPlugin {
     }
 
     @objc func removeItem(_ call: CAPPluginCall) {
+        let service = getConfig().getString("iosService") ?? ""
         let key = call.getString("key") ?? ""
         do {
-            try implementation.removeItemFromKeychain(key)
+            try implementation.removeItemFromKeychain(service, key)
             call.resolve()
         } catch {
             call.reject(error.localizedDescription)

@@ -1,3 +1,19 @@
+/// <reference types="@capacitor/cli" />
+
+declare module '@capacitor/cli' {
+  export interface PluginsConfig {
+    BiometricNative?: {
+      /**
+       * Constant string set up for identifying the keychain stored items
+       *
+       * @since 3.0.0
+       * @example "APP_SERVICE"
+       */
+      iosService?: string;
+    };
+  }
+}
+
 export interface BiometricNativePlugin {
   /**
    * Async get an item from the secure storage. Will invoke device biometric authentication.
